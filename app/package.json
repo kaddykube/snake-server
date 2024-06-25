@@ -10,5 +10,9 @@
   "description": "",
   "dependencies": {
     "express": "^4.19.2"
+  },
+  "devDependencies": {
+    "tailwindcss": "^3.4.4",
+    "typescript": "^5.5.2"
   }
 }
