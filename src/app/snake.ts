@@ -1,4 +1,5 @@
 export enum Direction {
+  DEFAULT,
   LEFT,
   RIGHT,
   UP,
@@ -25,6 +26,7 @@ export class Snake {
 
   calcPosition(direction: Direction): { x: number; y: number } {
     let position = { x: this.position.x, y: this.position.y };
+
     if (direction === Direction.LEFT) {
       position.x = this.position.x - 1;
     } else if (direction === Direction.RIGHT) {
