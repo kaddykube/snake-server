@@ -1,55 +1,4 @@
-type Direction = "left" | "right" | "up" | "down";
-type Anchor = { x: number; y: number; direction: Direction };
-
-class Snake {
-  color: string;
-  position: { x: number; y: number };
-  direction: "left" | "right" | "up" | "down";
-  score: number;
-  path: Anchor[];
-
-  constructor(color: string, x: number, y: number) {
-    this.color = color;
-    this.position = { x: x, y: y };
-    this.direction = "left";
-    this.score = 10;
-    this.path = [];
-    this.path.push({ x: x, y: y, direction: "right" });
-  }
-
-  calcPosition(direction: Direction): { x: number; y: number } {
-    let position = { x: this.position.x, y: this.position.y };
-    if (direction === "left") {
-      position.x = this.position.x - 1;
-    } else if (direction === "right") {
-      position.x = this.position.x + 1;
-    } else if (direction === "up") {
-      position.y = this.position.y - 1;
-    } else if (direction === "down") {
-      position.y = this.position.y + 1;
-    }
-    return position;
-  }
-
-  set(direction: Direction) {
-    if (direction) {
-      // add current values to path array
-      let anchor: Anchor = {
-        x: this.position.x,
-        y: this.position.y,
-        direction: this.direction,
-      };
-      this.path.push(anchor);
-
-      if (this.path.length > this.score) {
-        this.path.shift();
-      }
-      // set new values
-      this.position = this.calcPosition(direction);
-      this.direction = direction;
-    }
-  }
-}
+import { Direction, Snake } from "./snake";
 
 class Bite {
   position: { x: number; y: number };
@@ -179,25 +128,25 @@ const run = () => {
     switch (event.key) {
       case "ArrowDown":
         if (snake) {
-          snake.set("down");
+          snake.set(Direction.DOWN);
           update();
         }
         break;
       case "ArrowUp":
         if (snake) {
-          snake.set("up");
+          snake.set(Direction.UP);
           update();
         }
         break;
       case "ArrowLeft":
         if (snake) {
-          snake.set("left");
+          snake.set(Direction.LEFT);
           update();
         }
         break;
       case "ArrowRight":
         if (snake) {
-          snake.set("right");
+          snake.set(Direction.RIGHT);
           update();
         }
         break;

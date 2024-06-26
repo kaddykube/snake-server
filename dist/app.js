@@ -1,17 +1,16 @@
-"use strict";
-var __importDefault = (this && this.__importDefault) || function (mod) {
-    return (mod && mod.__esModule) ? mod : { "default": mod };
-};
-Object.defineProperty(exports, "__esModule", { value: true });
-const express_1 = __importDefault(require("express"));
-const path = require("path");
-const app = (0, express_1.default)();
+import express from "express";
+import path from "path";
+import { fileURLToPath } from "url";
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+const app = express();
 const port = process.env.PORT || 3000;
 app.get("/", (req, res) => {
     res.sendFile(path.join(__dirname, "index.html"));
 });
-app.use("/", express_1.default.static(__dirname + "/"));
-app.use("/app", express_1.default.static(__dirname + "/app"));
+app.use("/", express.static(__dirname + "/"));
+app.use("/style", express.static(__dirname + "/style"));
+app.use("/app", express.static(__dirname + "/app"));
 app.listen(port, () => {
     console.log(`running at http://localhost:${port}`);
 });
