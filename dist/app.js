@@ -7,10 +7,11 @@ const express_1 = __importDefault(require("express"));
 const path = require("path");
 const app = (0, express_1.default)();
 const port = process.env.PORT || 3000;
-app.use(express_1.default.static(__dirname + "/app"));
 app.get("/", (req, res) => {
     res.sendFile(path.join(__dirname, "index.html"));
 });
+app.use("/", express_1.default.static(__dirname + "/"));
+app.use("/app", express_1.default.static(__dirname + "/app"));
 app.listen(port, () => {
     console.log(`running at http://localhost:${port}`);
 });
