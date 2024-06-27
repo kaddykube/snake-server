@@ -1,7 +1,5 @@
 /* TYPES */
 
-import { Dir } from "fs";
-
 enum Direction {
   LEFT = 1,
   RIGHT,
@@ -10,6 +8,7 @@ enum Direction {
 }
 
 type Anchor = { x: number; y: number; direction: Direction };
+// position - anstelle anchor delete direction
 
 /* CLASSES */
 const MAX_X = 20;
@@ -47,22 +46,20 @@ class Snake {
   }
 
   set(direction: Direction) {
-    if (direction) {
-      // add current values to path array
-      let anchor: Anchor = {
-        x: this.position.x,
-        y: this.position.y,
-        direction: this.direction,
-      };
-      this.path.push(anchor);
+    // add current values to path array
+    let anchor: Anchor = {
+      x: this.position.x,
+      y: this.position.y,
+      direction: this.direction,
+    };
+    this.path.push(anchor);
 
-      if (this.path.length > this.score) {
-        this.path.shift();
-      }
-      // set new values
-      this.position = this.calcPosition(direction);
-      this.direction = direction;
+    if (this.path.length > this.score) {
+      this.path.shift();
     }
+    // set new values
+    this.position = this.calcPosition(direction);
+    this.direction = direction;
   }
 }
 
@@ -97,7 +94,7 @@ class Canvas {
   }
 
   createCanvas() {
-    const canvas = <HTMLCanvasElement>document.createElement("canvas");
+    const canvas = document.createElement("canvas");
     let context = canvas.getContext("2d");
     canvas.width = this.nrTilesX * this.tileSize;
     canvas.height = this.nrTilesY * this.tileSize;
@@ -165,12 +162,12 @@ class Canvas {
 }
 
 class Game {
-  active: boolean;
-  canvas: Canvas;
-  speed: number;
-  counter: number;
-  snake: Snake;
-  bite: Bite;
+  private active: boolean;
+  private canvas: Canvas;
+  private speed: number;
+  private counter: number;
+  private snake: Snake;
+  private bite: Bite;
 
   constructor(canvas: Canvas, speed: number) {
     this.active = false;
@@ -195,24 +192,26 @@ class Game {
 
   setDirection(direction: Direction) {
     this.snake.set(direction);
-    this.update();
   }
 
-  set() {
+  start() {
     if (this.snake && this.bite) {
       this.setActive(true);
-      this.update();
     }
+    this.update();
+    setInterval(() => {
+      this.setDirection(this.snake.direction);
+      this.update();
+    }, 2000);
   }
 
   update() {
     if (this.active) {
       this.canvas.clear();
-
-      this.bite.set(
-        Math.floor(Math.random() * MAX_X),
-        Math.floor(Math.random() * MAX_Y)
-      );
+      // TODO check position not in snake path
+      const x = Math.floor(Math.random() * MAX_X);
+      const y = Math.floor(Math.random() * MAX_Y);
+      this.bite.set(x, y);
       this.canvas.drawBite(this.bite);
       this.canvas.drawSnake(this.snake);
     }
@@ -223,7 +222,9 @@ class Game {
   }
 
   play() {
-    this.setActive(true);
+    if (!this.active) {
+      this.setActive(true);
+    }
   }
 }
 
@@ -237,20 +238,22 @@ const run = () => {
 
   // control
 
-  const startButton: HTMLButtonElement = <HTMLButtonElement>(
-    document.getElementById("start")
-  );
-  const pauseButton: HTMLButtonElement = <HTMLButtonElement>(
-    document.getElementById("pause")
-  );
-  const playButton: HTMLButtonElement = <HTMLButtonElement>(
-    document.getElementById("play")
-  );
+  function tryGetButton(id: string): HTMLButtonElement {
+    const element = document.getElementById(id);
+    if (element && element instanceof HTMLButtonElement) {
+      return element;
+    }
+    throw Error("no button");
+  }
+
+  const startButton: HTMLButtonElement = tryGetButton("start");
+  const pauseButton: HTMLButtonElement = tryGetButton("pause");
+  const playButton: HTMLButtonElement = tryGetButton("play");
 
   if (startButton && pauseButton && playButton) {
     startButton.addEventListener("click", () => {
       startButton.disabled = true;
-      game.set();
+      game.start();
     });
     pauseButton.addEventListener("click", () => {
       game.pause();
@@ -264,37 +267,26 @@ const run = () => {
     if (event.defaultPrevented) {
       return; // Do nothing if the event was already processed
     }
-
+    if (!game) {
+      return;
+    }
     switch (event.key) {
       case "ArrowDown":
-        if (game) {
-          game.setDirection(Direction.DOWN);
-        }
+        game.setDirection(Direction.DOWN);
         break;
       case "ArrowUp":
-        if (game) {
-          game.setDirection(Direction.UP);
-        }
+        game.setDirection(Direction.UP);
         break;
       case "ArrowLeft":
-        if (game) {
-          game.setDirection(Direction.LEFT);
-        }
+        game.setDirection(Direction.LEFT);
         break;
       case "ArrowRight":
-        if (game) {
-          game.setDirection(Direction.RIGHT);
-        }
+        game.setDirection(Direction.RIGHT);
         break;
-      case " ":
-        break;
-      default:
-        return;
     }
   });
 };
 
 window.onload = () => {
-  console.log("test events:");
   run();
 };
