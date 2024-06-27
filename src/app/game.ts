@@ -7,8 +7,7 @@ enum Direction {
   DOWN,
 }
 
-type Anchor = { x: number; y: number; direction: Direction };
-// position - anstelle anchor delete direction
+type Position = { x: number; y: number };
 
 /* CLASSES */
 const MAX_X = 20;
@@ -16,10 +15,10 @@ const MAX_Y = 20;
 
 class Snake {
   color: string;
-  position: { x: number; y: number };
+  position: Position;
   direction: Direction;
   score: number;
-  path: Anchor[];
+  path: Position[];
 
   constructor(color: string, x: number, y: number) {
     this.color = color;
@@ -27,7 +26,7 @@ class Snake {
     this.direction = Direction.RIGHT;
     this.score = 10;
     this.path = [];
-    this.path.push({ x: x, y: y, direction: this.direction });
+    this.path.push({ x: x, y: y });
   }
 
   calcPosition(direction: Direction): { x: number; y: number } {
@@ -47,10 +46,9 @@ class Snake {
 
   set(direction: Direction) {
     // add current values to path array
-    let anchor: Anchor = {
+    let anchor: Position = {
       x: this.position.x,
       y: this.position.y,
-      direction: this.direction,
     };
     this.path.push(anchor);
 
@@ -209,9 +207,11 @@ class Game {
     if (this.active) {
       this.canvas.clear();
       // TODO check position not in snake path
+
       const x = Math.floor(Math.random() * MAX_X);
       const y = Math.floor(Math.random() * MAX_Y);
       this.bite.set(x, y);
+
       this.canvas.drawBite(this.bite);
       this.canvas.drawSnake(this.snake);
     }
