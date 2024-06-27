@@ -1,3 +1,8 @@
+html,
+body {
+  padding: 0px;
+  margin: 0px;
+}
 body {
   background-color: rgb(255, 255, 255);
   width: 100vw;
@@ -31,6 +36,11 @@ button {
   display: inline;
   background-color: rgb(56, 33, 79);
   border: 1px solid rgb(216, 255, 216);
+  border-radius: 5px;
   color: rgb(216, 255, 216);
   padding: 10px;
+}
+
+#start {
+  margin-left: 10px;
 }

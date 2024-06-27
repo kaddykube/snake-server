@@ -165,6 +165,7 @@ class Canvas {
 }
 
 class Game {
+  active: boolean;
   canvas: Canvas;
   speed: number;
   counter: number;
@@ -172,11 +173,16 @@ class Game {
   bite: Bite;
 
   constructor(canvas: Canvas, speed: number) {
+    this.active = false;
     this.canvas = canvas;
     this.speed = 1500;
     this.counter = 0;
     this.snake = new Snake("#00ff00", 5, 5);
     this.bite = new Bite("#4C0062", 11, 10);
+  }
+
+  setActive(status: boolean) {
+    this.active = status;
   }
 
   setSnake(snake: Snake) {
@@ -192,15 +198,32 @@ class Game {
     this.update();
   }
 
-  update() {
-    this.canvas.clear();
+  set() {
+    if (this.snake && this.bite) {
+      this.setActive(true);
+      this.update();
+    }
+  }
 
-    this.bite.set(
-      Math.floor(Math.random() * MAX_X),
-      Math.floor(Math.random() * MAX_Y)
-    );
-    this.canvas.drawBite(this.bite);
-    this.canvas.drawSnake(this.snake);
+  update() {
+    if (this.active) {
+      this.canvas.clear();
+
+      this.bite.set(
+        Math.floor(Math.random() * MAX_X),
+        Math.floor(Math.random() * MAX_Y)
+      );
+      this.canvas.drawBite(this.bite);
+      this.canvas.drawSnake(this.snake);
+    }
+  }
+
+  pause() {
+    this.setActive(false);
+  }
+
+  play() {
+    this.setActive(true);
   }
 }
 
@@ -208,12 +231,8 @@ class Game {
 
 const run = () => {
   // init canvas and game items
-
-  let activeGame = false;
   const canvas = new Canvas(20, MAX_X + 1, MAX_Y + 1);
-
   // scene
-
   const game = new Game(canvas, 1000);
 
   // control
@@ -224,15 +243,20 @@ const run = () => {
   const pauseButton: HTMLButtonElement = <HTMLButtonElement>(
     document.getElementById("pause")
   );
+  const playButton: HTMLButtonElement = <HTMLButtonElement>(
+    document.getElementById("play")
+  );
 
-  if (startButton && pauseButton) {
+  if (startButton && pauseButton && playButton) {
     startButton.addEventListener("click", () => {
-      activeGame = !activeGame;
       startButton.disabled = true;
-      game.update();
+      game.set();
     });
     pauseButton.addEventListener("click", () => {
-      activeGame = !activeGame;
+      game.pause();
+    });
+    playButton.addEventListener("click", () => {
+      game.play();
     });
   }
 
@@ -271,5 +295,6 @@ const run = () => {
 };
 
 window.onload = () => {
+  console.log("test events:");
   run();
 };
