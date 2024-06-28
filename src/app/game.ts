@@ -14,19 +14,54 @@ const MAX_X = 20;
 const MAX_Y = 20;
 
 class Snake {
+  private position: Position;
   color: string;
-  position: Position;
-  direction: Direction;
-  score: number;
+  private direction: Direction;
+  private score: number;
   path: Position[];
 
   constructor(color: string, x: number, y: number) {
     this.color = color;
     this.position = { x: x, y: y };
     this.direction = Direction.RIGHT;
-    this.score = 10;
+    this.score = 1;
     this.path = [];
     this.path.push({ x: x, y: y });
+  }
+
+  incrementScore() {
+    this.score++;
+  }
+
+  getScore() {
+    return this.score;
+  }
+
+  // utils
+
+  checkForCollision(bitePosition: Position) {
+    return isEqualPosition(this.position, bitePosition);
+  }
+
+  isDirectionOpposite(direction: Direction) {
+    if (direction === Direction.LEFT && this.direction === Direction.RIGHT) {
+      return true;
+    } else if (
+      direction === Direction.RIGHT &&
+      this.direction === Direction.LEFT
+    ) {
+      return true;
+    } else if (
+      direction === Direction.UP &&
+      this.direction === Direction.DOWN
+    ) {
+      return true;
+    } else if (
+      direction === Direction.DOWN &&
+      this.direction === Direction.UP
+    ) {
+      return true;
+    }
   }
 
   calcPosition(direction: Direction): { x: number; y: number } {
@@ -44,26 +79,36 @@ class Snake {
     return position;
   }
 
-  set(direction: Direction) {
+  // when active game
+
+  setDirection(direction: Direction) {
+    if (!this.isDirectionOpposite(direction)) {
+      this.direction = direction;
+    }
+  }
+
+  move() {
+    // disable moving in opposite direction
+
+    // set new values
+    this.position = this.calcPosition(this.direction);
+
     // add current values to path array
     let anchor: Position = {
       x: this.position.x,
       y: this.position.y,
     };
-    this.path.push(anchor);
 
+    this.path.push(anchor);
     if (this.path.length > this.score) {
       this.path.shift();
     }
-    // set new values
-    this.position = this.calcPosition(direction);
-    this.direction = direction;
   }
 }
 
 class Bite {
-  position: { x: number; y: number };
   color: string;
+  position: { x: number; y: number };
 
   constructor(color: string, x: number, y: number) {
     this.position = { x: x, y: y };
@@ -76,12 +121,12 @@ class Bite {
 }
 
 class Canvas {
-  tileSize: number;
-  nrTilesX: number;
-  nrTilesY: number;
+  private tileSize: number;
+  private nrTilesX: number;
+  private nrTilesY: number;
 
-  canvas: HTMLCanvasElement;
-  context: CanvasRenderingContext2D;
+  private canvas: HTMLCanvasElement;
+  private context: CanvasRenderingContext2D;
 
   constructor(tileSize: number, nrTilesX: number, nrTilesY: number) {
     this.tileSize = tileSize;
@@ -163,15 +208,13 @@ class Game {
   private active: boolean;
   private canvas: Canvas;
   private speed: number;
-  private counter: number;
   private snake: Snake;
   private bite: Bite;
 
   constructor(canvas: Canvas, speed: number) {
     this.active = false;
     this.canvas = canvas;
-    this.speed = 1500;
-    this.counter = 0;
+    this.speed = 1000;
     this.snake = new Snake("#00ff00", 5, 5);
     this.bite = new Bite("#4C0062", 11, 10);
   }
@@ -188,33 +231,66 @@ class Game {
     this.bite = bite;
   }
 
-  setDirection(direction: Direction) {
-    this.snake.set(direction);
+  inputDirection(direction: Direction) {
+    this.snake.setDirection(direction);
   }
 
   start() {
     if (this.snake && this.bite) {
       this.setActive(true);
-    }
-    this.update();
-    setInterval(() => {
-      this.setDirection(this.snake.direction);
-      this.update();
-    }, 2000);
-  }
-
-  update() {
-    if (this.active) {
-      this.canvas.clear();
-      // TODO check position not in snake path
-
       const x = Math.floor(Math.random() * MAX_X);
       const y = Math.floor(Math.random() * MAX_Y);
       this.bite.set(x, y);
-
-      this.canvas.drawBite(this.bite);
-      this.canvas.drawSnake(this.snake);
     }
+    this.update();
+
+    setInterval(() => {
+      if (this.active) {
+        this.snake.move();
+        this.update();
+      }
+    }, this.speed);
+  }
+
+  // TODO: dynamic speed
+  setLevelInterval() {
+    const intervalID = setInterval(() => {
+      if (this.active) {
+        if (this.snake.getScore() < 3) {
+          this.snake.move();
+          this.update();
+        } else {
+          clearInterval(intervalID);
+          this.speed = this.speed / 2;
+          const intervalIDID = setInterval(() => {
+            if (this.active) {
+              this.snake.move();
+              this.update();
+            } else {
+              clearInterval(intervalIDID);
+            }
+          }, this.speed);
+        }
+      } else {
+        clearInterval(intervalID);
+      }
+    }, this.speed);
+  }
+
+  update() {
+    this.canvas.clear();
+    // TODO check position not in snake path
+
+    if (this.snake.checkForCollision(this.bite.position)) {
+      this.snake.incrementScore();
+      // todo random
+      const x = Math.floor(Math.random() * MAX_X);
+      const y = Math.floor(Math.random() * MAX_Y);
+      this.bite.set(x, y);
+    }
+
+    this.canvas.drawBite(this.bite);
+    this.canvas.drawSnake(this.snake);
   }
 
   pause() {
@@ -237,14 +313,6 @@ const run = () => {
   const game = new Game(canvas, 1000);
 
   // control
-
-  function tryGetButton(id: string): HTMLButtonElement {
-    const element = document.getElementById(id);
-    if (element && element instanceof HTMLButtonElement) {
-      return element;
-    }
-    throw Error("no button");
-  }
 
   const startButton: HTMLButtonElement = tryGetButton("start");
   const pauseButton: HTMLButtonElement = tryGetButton("pause");
@@ -272,16 +340,16 @@ const run = () => {
     }
     switch (event.key) {
       case "ArrowDown":
-        game.setDirection(Direction.DOWN);
+        game.inputDirection(Direction.DOWN);
         break;
       case "ArrowUp":
-        game.setDirection(Direction.UP);
+        game.inputDirection(Direction.UP);
         break;
       case "ArrowLeft":
-        game.setDirection(Direction.LEFT);
+        game.inputDirection(Direction.LEFT);
         break;
       case "ArrowRight":
-        game.setDirection(Direction.RIGHT);
+        game.inputDirection(Direction.RIGHT);
         break;
     }
   });
@@ -290,3 +358,19 @@ const run = () => {
 window.onload = () => {
   run();
 };
+
+/* Util */
+
+function tryGetButton(id: string): HTMLButtonElement {
+  const element = document.getElementById(id);
+  if (element && element instanceof HTMLButtonElement) {
+    return element;
+  }
+  throw Error("no button");
+}
+
+function isEqualPosition(obj1: Position, obj2: Position) {
+  if (obj1.x === obj2.x && obj1.y === obj2.y) {
+    return true;
+  }
+}
