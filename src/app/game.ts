@@ -9,9 +9,12 @@ enum Direction {
 
 type Position = { x: number; y: number };
 
+/* GLOBAL */
+
+const MAX_X = 15;
+const MAX_Y = 15;
+
 /* CLASSES */
-const MAX_X = 20;
-const MAX_Y = 20;
 
 class Snake {
   private position: Position;
@@ -88,8 +91,6 @@ class Snake {
   }
 
   move() {
-    // disable moving in opposite direction
-
     // set new values
     this.position = this.calcPosition(this.direction);
 
@@ -211,10 +212,10 @@ class Game {
   private snake: Snake;
   private bite: Bite;
 
-  constructor(canvas: Canvas, speed: number) {
+  constructor(canvas: Canvas, speed?: number) {
     this.active = false;
     this.canvas = canvas;
-    this.speed = 1000;
+    this.speed = speed | 1000;
     this.snake = new Snake("#00ff00", 5, 5);
     this.bite = new Bite("#4C0062", 11, 10);
   }
@@ -235,24 +236,23 @@ class Game {
     this.snake.setDirection(direction);
   }
 
-  start() {
-    if (this.snake && this.bite) {
-      this.setActive(true);
-      const x = Math.floor(Math.random() * MAX_X);
-      const y = Math.floor(Math.random() * MAX_Y);
-      this.bite.set(x, y);
-    }
-    this.update();
-
-    setInterval(() => {
-      if (this.active) {
-        this.snake.move();
-        this.update();
+  generateRandomBitePosition(deselect: Position[]) {
+    let array: Position[] = [];
+    for (let i = 0; i < MAX_X; i++) {
+      for (let j = 0; j < MAX_Y; j++) {
+        let check = deselect.find((position) =>
+          isEqualPosition(position, { x: i, y: j })
+        );
+        if (!check) {
+          array.push({ x: i, y: j });
+        }
       }
-    }, this.speed);
+    }
+    return array[Math.floor(Math.random() * array.length)];
   }
 
   // TODO: dynamic speed
+  /*   
   setLevelInterval() {
     const intervalID = setInterval(() => {
       if (this.active) {
@@ -276,19 +276,38 @@ class Game {
       }
     }, this.speed);
   }
-
-  update() {
-    this.canvas.clear();
-    // TODO check position not in snake path
-
-    if (this.snake.checkForCollision(this.bite.position)) {
-      this.snake.incrementScore();
-      // todo random
+ */
+  start() {
+    if (this.snake && this.bite) {
+      this.setActive(true);
       const x = Math.floor(Math.random() * MAX_X);
       const y = Math.floor(Math.random() * MAX_Y);
       this.bite.set(x, y);
     }
+    this.update();
 
+    setInterval(() => {
+      if (this.active) {
+        this.snake.move();
+        if (this.snake.checkForCollision(this.bite.position)) {
+          this.snake.incrementScore();
+          const randomPosition = this.generateRandomBitePosition(
+            this.snake.path
+          );
+          if (randomPosition) {
+            this.bite.set(randomPosition.x, randomPosition.y);
+          } else {
+            // end of game
+            this.bite.set(0, 0);
+          }
+        }
+        this.update();
+      }
+    }, this.speed);
+  }
+
+  update() {
+    this.canvas.clear();
     this.canvas.drawBite(this.bite);
     this.canvas.drawSnake(this.snake);
   }
@@ -308,7 +327,7 @@ class Game {
 
 const run = () => {
   // init canvas and game items
-  const canvas = new Canvas(20, MAX_X + 1, MAX_Y + 1);
+  const canvas = new Canvas(20, MAX_X, MAX_Y);
   // scene
   const game = new Game(canvas, 1000);
 
