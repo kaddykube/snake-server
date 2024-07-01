@@ -235,14 +235,18 @@ class Canvas {
   }
 }
 
-class Game {
+class Game extends EventTarget {
   private active: boolean;
   private canvas: Canvas;
   private speed: number;
   private snake: Snake;
   private bite: Bite;
+  private _complete: Event = new Event("complete");
+
+  // https://hackwild.com/article/event-handling-techniques/
 
   constructor(canvas: Canvas, speed: number = 700) {
+    super();
     this.active = false;
     this.canvas = canvas;
     this.speed = speed;
@@ -285,44 +289,42 @@ class Game {
     return array[Math.floor(Math.random() * array.length)];
   }
 
-  start(): Promise<string> {
-    return new Promise((resolve, reject) => {
-      if (this.snake && this.bite) {
-        this.setActive(true);
-        const x = Math.floor(Math.random() * MAX_X);
-        const y = Math.floor(Math.random() * MAX_Y);
-        this.bite.set(x, y);
-      }
+  start() {
+    if (this.snake && this.bite) {
+      this.setActive(true);
+      const x = Math.floor(Math.random() * MAX_X);
+      const y = Math.floor(Math.random() * MAX_Y);
+      this.bite.set(x, y);
+    }
 
-      const intervalID = setInterval(() => {
-        if (this.active) {
-          this.snake.move();
-          if (this.snake.crossBorder()) {
-            this.gameOver();
-            this.active = !this.active;
-            clearInterval(intervalID);
-            resolve("restart");
-          } else {
-            if (this.snake.checkForCollision(this.bite.position)) {
-              this.snake.incrementScore();
-              const randomPosition = this.generateRandomBitePosition(
-                this.snake.path
-              );
-              if (randomPosition) {
-                this.bite.set(randomPosition.x, randomPosition.y);
-              } else {
-                this.end();
-                this.active = !this.active;
-                clearInterval(intervalID);
-                resolve("restart");
-              }
+    const intervalID = setInterval(() => {
+      if (this.active) {
+        this.snake.move();
+        if (this.snake.crossBorder()) {
+          this.gameOver();
+          this.active = !this.active;
+          clearInterval(intervalID);
+          this.dispatchEvent(this._complete);
+        } else {
+          if (this.snake.checkForCollision(this.bite.position)) {
+            this.snake.incrementScore();
+            const randomPosition = this.generateRandomBitePosition(
+              this.snake.path
+            );
+            if (randomPosition) {
+              this.bite.set(randomPosition.x, randomPosition.y);
             } else {
-              this.update();
+              this.end();
+              this.active = !this.active;
+              clearInterval(intervalID);
+              this.dispatchEvent(this._complete);
             }
+          } else {
+            this.update();
           }
         }
-      }, this.speed);
-    });
+      }
+    }, this.speed);
   }
 
   update() {
@@ -348,6 +350,8 @@ class Game {
   gameOver() {
     this.canvas.drawMessage("game over");
   }
+
+  // event name
 }
 
 /* INIT */
@@ -371,17 +375,13 @@ const run = () => {
     startButton.addEventListener("click", async () => {
       startButton.disabled = true;
       startButton.innerText = "running";
-      const gameID = await game.start();
-      if (!game.getActive()) {
+      game.start();
+      const completeHandler = () => {
         startButton.disabled = false;
         startButton.innerText = "restart";
         newGame();
-      }
-      /*   if (gameID) {
-        startButton.disabled = false;
-        startButton.innerText = "restart";
-        newGame();
-      } */
+      };
+      game.addEventListener("complete", completeHandler);
     });
 
     pauseButton.addEventListener("click", () => {
