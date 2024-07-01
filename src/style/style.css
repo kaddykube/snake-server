@@ -34,11 +34,16 @@ body {
 
 button {
   display: inline;
-  background-color: rgb(56, 33, 79);
+  background-color: #38214f;
   border: 1px solid rgb(216, 255, 216);
   border-radius: 5px;
   color: rgb(216, 255, 216);
   padding: 10px;
+  opacity: 1;
+}
+
+button:disabled {
+  opacity: 0.5;
 }
 
 #start {

@@ -42,6 +42,17 @@ class Snake {
 
   // utils
 
+  crossBorder() {
+    if (
+      this.position.x < 0 ||
+      this.position.y < 0 ||
+      this.position.x >= MAX_X ||
+      this.position.y >= MAX_X
+    ) {
+      return true;
+    }
+  }
+
   checkForCollision(bitePosition: Position) {
     return isEqualPosition(this.position, bitePosition);
   }
@@ -194,6 +205,25 @@ class Canvas {
     });
   }
 
+  drawMessage(text: string) {
+    this.context.clearRect(
+      0,
+      0,
+      this.nrTilesX * this.tileSize,
+      this.nrTilesY * this.tileSize
+    );
+    this.context.beginPath();
+    this.context.font = "bold italic 30px Arial";
+    this.context.fillStyle = "#ff4000";
+    this.context.textAlign = "center";
+    this.context.textBaseline = "middle";
+    this.context.fillText(
+      text,
+      Math.floor((this.nrTilesX * this.tileSize) / 2),
+      Math.floor((this.nrTilesY * this.tileSize) / 2)
+    );
+  }
+
   clear() {
     this.context.clearRect(
       0,
@@ -212,16 +242,20 @@ class Game {
   private snake: Snake;
   private bite: Bite;
 
-  constructor(canvas: Canvas, speed?: number) {
+  constructor(canvas: Canvas, speed: number = 700) {
     this.active = false;
     this.canvas = canvas;
-    this.speed = speed | 1000;
+    this.speed = speed;
     this.snake = new Snake("#00ff00", 5, 5);
     this.bite = new Bite("#4C0062", 11, 10);
   }
 
   setActive(status: boolean) {
     this.active = status;
+  }
+
+  getActive(): boolean {
+    return this.active;
   }
 
   setSnake(snake: Snake) {
@@ -251,59 +285,44 @@ class Game {
     return array[Math.floor(Math.random() * array.length)];
   }
 
-  // TODO: dynamic speed
-  /*   
-  setLevelInterval() {
-    const intervalID = setInterval(() => {
-      if (this.active) {
-        if (this.snake.getScore() < 3) {
-          this.snake.move();
-          this.update();
-        } else {
-          clearInterval(intervalID);
-          this.speed = this.speed / 2;
-          const intervalIDID = setInterval(() => {
-            if (this.active) {
-              this.snake.move();
-              this.update();
-            } else {
-              clearInterval(intervalIDID);
-            }
-          }, this.speed);
-        }
-      } else {
-        clearInterval(intervalID);
+  start(): Promise<string> {
+    return new Promise((resolve, reject) => {
+      if (this.snake && this.bite) {
+        this.setActive(true);
+        const x = Math.floor(Math.random() * MAX_X);
+        const y = Math.floor(Math.random() * MAX_Y);
+        this.bite.set(x, y);
       }
-    }, this.speed);
-  }
- */
-  start() {
-    if (this.snake && this.bite) {
-      this.setActive(true);
-      const x = Math.floor(Math.random() * MAX_X);
-      const y = Math.floor(Math.random() * MAX_Y);
-      this.bite.set(x, y);
-    }
-    this.update();
 
-    setInterval(() => {
-      if (this.active) {
-        this.snake.move();
-        if (this.snake.checkForCollision(this.bite.position)) {
-          this.snake.incrementScore();
-          const randomPosition = this.generateRandomBitePosition(
-            this.snake.path
-          );
-          if (randomPosition) {
-            this.bite.set(randomPosition.x, randomPosition.y);
+      const intervalID = setInterval(() => {
+        if (this.active) {
+          this.snake.move();
+          if (this.snake.crossBorder()) {
+            this.gameOver();
+            this.active = !this.active;
+            clearInterval(intervalID);
+            resolve("restart");
           } else {
-            // end of game
-            this.bite.set(0, 0);
+            if (this.snake.checkForCollision(this.bite.position)) {
+              this.snake.incrementScore();
+              const randomPosition = this.generateRandomBitePosition(
+                this.snake.path
+              );
+              if (randomPosition) {
+                this.bite.set(randomPosition.x, randomPosition.y);
+              } else {
+                this.end();
+                this.active = !this.active;
+                clearInterval(intervalID);
+                resolve("restart");
+              }
+            } else {
+              this.update();
+            }
           }
         }
-        this.update();
-      }
-    }, this.speed);
+      }, this.speed);
+    });
   }
 
   update() {
@@ -321,6 +340,14 @@ class Game {
       this.setActive(true);
     }
   }
+
+  end() {
+    this.canvas.drawMessage("you win");
+  }
+
+  gameOver() {
+    this.canvas.drawMessage("game over");
+  }
 }
 
 /* INIT */
@@ -329,19 +356,29 @@ const run = () => {
   // init canvas and game items
   const canvas = new Canvas(20, MAX_X, MAX_Y);
   // scene
-  const game = new Game(canvas, 1000);
+  let game = new Game(canvas, 550);
 
   // control
-
   const startButton: HTMLButtonElement = tryGetButton("start");
   const pauseButton: HTMLButtonElement = tryGetButton("pause");
   const playButton: HTMLButtonElement = tryGetButton("play");
 
+  function newGame() {
+    game = new Game(canvas, 550);
+  }
+
   if (startButton && pauseButton && playButton) {
-    startButton.addEventListener("click", () => {
+    startButton.addEventListener("click", async () => {
       startButton.disabled = true;
-      game.start();
+      startButton.innerText = "running";
+      const gameID = await game.start();
+      if (gameID) {
+        startButton.disabled = false;
+        startButton.innerText = "restart";
+        newGame();
+      }
     });
+
     pauseButton.addEventListener("click", () => {
       game.pause();
     });
@@ -350,9 +387,11 @@ const run = () => {
     });
   }
 
+  // restart function displayRestartButton wait for game class call
+
   window.addEventListener("keydown", (event: KeyboardEvent) => {
     if (event.defaultPrevented) {
-      return; // Do nothing if the event was already processed
+      return; // do nothing if the event was already processed
     }
     if (!game) {
       return;
