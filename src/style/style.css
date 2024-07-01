@@ -30,6 +30,7 @@ body {
 
 #control {
   display: flex;
+  padding: 20px 0px;
 }
 
 button {

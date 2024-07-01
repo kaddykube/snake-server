@@ -11,7 +11,7 @@ type Position = { x: number; y: number };
 
 /* GLOBAL */
 
-const MAX_X = 15;
+const MAX_X = 19;
 const MAX_Y = 15;
 
 /* CLASSES */
@@ -372,11 +372,16 @@ const run = () => {
       startButton.disabled = true;
       startButton.innerText = "running";
       const gameID = await game.start();
-      if (gameID) {
+      if (!game.getActive()) {
         startButton.disabled = false;
         startButton.innerText = "restart";
         newGame();
       }
+      /*   if (gameID) {
+        startButton.disabled = false;
+        startButton.innerText = "restart";
+        newGame();
+      } */
     });
 
     pauseButton.addEventListener("click", () => {
