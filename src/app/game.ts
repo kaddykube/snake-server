@@ -392,8 +392,6 @@ const run = () => {
     });
   }
 
-  // restart function displayRestartButton wait for game class call
-
   window.addEventListener("keydown", (event: KeyboardEvent) => {
     if (event.defaultPrevented) {
       return; // do nothing if the event was already processed
