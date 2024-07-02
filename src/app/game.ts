@@ -14,29 +14,41 @@ type Position = { x: number; y: number };
 const MAX_X = 10;
 const MAX_Y = 10;
 const MIN_SPEED = 650;
+const GRID_COLOR = "#ffffff";
 const BITE_COLOR = "#4C0062";
 const SNAKE_COLOR = "#00ff00";
 
 /* CLASSES */
 
 class Snake {
-  private direction: Direction;
-  private score: number;
-  path: Position[];
+  private _direction: Direction;
+  private _score: number;
+  public path: Position[];
 
-  constructor(x: number, y: number) {
-    this.direction = Direction.RIGHT;
-    this.score = 1;
+  constructor(position: Position) {
+    this._direction = Direction.RIGHT;
+    this._score = 1;
     this.path = [];
-    this.path.push({ x: x, y: y });
+    this.path.push(position);
   }
 
   incrementScore() {
-    this.score++;
+    this._score++;
   }
 
-  getScore() {
-    return this.score;
+  public get score() {
+    return this._score;
+  }
+
+  public get direction() {
+    return this._direction;
+  }
+
+  public set direction(direction: Direction) {
+    if (this.isDirectionOpposite(direction)) {
+      throw new Error("Direction is invalid");
+    }
+    this._direction = direction;
   }
 
   // utils
@@ -96,23 +108,21 @@ class Snake {
       x: this.path[this.path.length - 1].x,
       y: this.path[this.path.length - 1].y,
     };
-
-    if (direction === Direction.LEFT) {
-      position.x = this.path[this.path.length - 1].x - 1;
-    } else if (direction === Direction.RIGHT) {
-      position.x = this.path[this.path.length - 1].x + 1;
-    } else if (direction === Direction.UP) {
-      position.y = this.path[this.path.length - 1].y - 1;
-    } else if (direction === Direction.DOWN) {
-      position.y = this.path[this.path.length - 1].y + 1;
+    switch (direction) {
+      case Direction.LEFT:
+        position.x = this.path[this.path.length - 1].x - 1;
+        break;
+      case Direction.RIGHT:
+        position.x = this.path[this.path.length - 1].x + 1;
+        break;
+      case Direction.UP:
+        position.y = this.path[this.path.length - 1].y - 1;
+        break;
+      case Direction.DOWN:
+        position.y = this.path[this.path.length - 1].y + 1;
+        break;
     }
     return position;
-  }
-
-  setDirection(direction: Direction) {
-    if (!this.isDirectionOpposite(direction)) {
-      this.direction = direction;
-    }
   }
 
   move() {
@@ -126,14 +136,18 @@ class Snake {
 }
 
 class Bite {
-  position: Position;
+  private _position: Position;
 
-  constructor(x: number, y: number) {
-    this.position = { x: x, y: y };
+  constructor(position: Position) {
+    this._position = position;
   }
 
-  set(x: number, y: number) {
-    this.position = { x: x, y: y };
+  public set position(position: Position) {
+    this._position = position;
+  }
+
+  public get position() {
+    return this._position;
   }
 }
 
@@ -159,16 +173,14 @@ class Canvas {
     canvas.width = this.nrTilesX * this.tileSize;
     canvas.height = this.nrTilesY * this.tileSize;
     this.canvas = canvas;
-    try {
-      if (context) {
-        this.context = context;
-        let game = document.getElementById("game");
-        if (game) {
-          game.appendChild(this.canvas);
-        }
+    if (context) {
+      this.context = context;
+      let game = document.getElementById("game");
+      if (game) {
+        game.appendChild(this.canvas);
       }
-    } catch (err) {
-      document.getElementById("game").innerHTML = err.message;
+    } else {
+      throw new Error("no context");
     }
   }
 
@@ -182,7 +194,7 @@ class Canvas {
       this.context.moveTo(0, this.tileSize * y);
       this.context.lineTo(this.canvas.width * this.tileSize, this.tileSize * y);
     }
-    this.context.strokeStyle = "#ffffff";
+    this.context.strokeStyle = GRID_COLOR;
     this.context.stroke();
   }
 
@@ -245,46 +257,64 @@ class Canvas {
 }
 
 class Game extends EventTarget {
-  private active: boolean;
+  private _active: boolean;
   private canvas: Canvas;
-  private speed: number;
-  private snake: Snake;
-  private bite: Bite;
+  private _speed: number;
+  private _snake: Snake;
+  private _bite: Bite;
   private complete: Event = new Event("complete");
 
   constructor(canvas: Canvas, speed: number = 700) {
     super();
-    this.active = false;
+    this._active = false;
     this.canvas = canvas;
-    this.speed = speed;
-    this.snake = new Snake(
-      Math.floor((Math.random() * MAX_X) / 2),
-      Math.floor((Math.random() * MAX_Y) / 2)
-    );
-    this.bite = new Bite(
-      Math.floor((Math.random() * MAX_X) / 2),
-      Math.floor((Math.random() * MAX_Y) / 2)
-    );
+    this._speed = speed;
+    const positionSnake = {
+      x: Math.floor((Math.random() * MAX_X) / 2),
+      y: Math.floor((Math.random() * MAX_Y) / 2),
+    };
+    this.snake = new Snake(positionSnake);
+    const positionBite = {
+      x: Math.floor(Math.random() * MAX_X),
+      y: Math.floor(Math.random() * MAX_Y),
+    };
+    this.bite = new Bite(positionBite);
   }
 
-  setActive(status: boolean) {
-    this.active = status;
+  public set speed(speed: number) {
+    this._speed = speed;
   }
 
-  getActive(): boolean {
-    return this.active;
+  public get speed(): number {
+    return this._speed;
   }
 
-  setSnake(snake: Snake) {
-    this.snake = snake;
+  public set active(status: boolean) {
+    this._active = status;
   }
 
-  setBite(bite: Bite) {
-    this.bite = bite;
+  public get active(): boolean {
+    return this._active;
+  }
+
+  public set snake(snake: Snake) {
+    this._snake = snake;
+  }
+
+  public get snake() {
+    return this._snake;
+  }
+
+  public set bite(bite: Bite) {
+    this._bite = bite;
+  }
+
+  public get bite() {
+    return this._bite;
   }
 
   inputDirection(direction: Direction) {
-    this.snake.setDirection(direction);
+    this.snake.direction = direction;
   }
 
   generateRandomBitePosition(deselect: Position[]) {
@@ -304,23 +334,25 @@ class Game extends EventTarget {
 
   start() {
     if (this.snake && this.bite) {
-      this.setActive(true);
-      const x = Math.floor(Math.random() * MAX_X);
-      const y = Math.floor(Math.random() * MAX_Y);
-      this.bite.set(x, y);
+      this.active = true;
+      const positionBite = {
+        x: Math.floor(Math.random() * MAX_X),
+        y: Math.floor(Math.random() * MAX_Y),
+      };
+      this.bite.position = positionBite;
     }
-    this.gameLoop(this.speed, this.snake.getScore());
+    this.gameLoop(this.speed, this.snake.score);
   }
 
   speedUp(timeStamp: number, tempSnakeScore: number) {
     // speed dependents on snake score
     let speed = timeStamp;
     if (speed > 150) {
-      if (tempSnakeScore < this.snake.getScore() && timeStamp > 50) {
+      if (tempSnakeScore < this.snake.score && timeStamp > 50) {
         speed = Math.floor(timeStamp - 20);
       }
     }
-    this.gameLoop(speed, this.snake.getScore());
+    this.gameLoop(speed, this.snake.score);
   }
 
   gameLoop(timeStamp: number, tempSnakeScore: number) {
@@ -342,7 +374,7 @@ class Game extends EventTarget {
               this.snake.path
             );
             if (randomPosition) {
-              this.bite.set(randomPosition.x, randomPosition.y);
+              this.bite.position = randomPosition;
               this.speedUp(timeStamp, tempSnakeScore);
             } else {
               // draw message
@@ -371,12 +403,12 @@ class Game extends EventTarget {
   }
 
   pause() {
-    this.setActive(false);
+    this.active = false;
   }
 
   play() {
     if (!this.active) {
-      this.setActive(true);
+      this.active = true;
     }
   }
 
