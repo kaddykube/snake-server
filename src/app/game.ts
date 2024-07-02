@@ -11,8 +11,9 @@ type Position = { x: number; y: number };
 
 /* GLOBAL */
 
-const MAX_X = 19;
-const MAX_Y = 15;
+const MAX_X = 10;
+const MAX_Y = 10;
+const MIN_SPEED = 750;
 
 /* CLASSES */
 
@@ -47,7 +48,7 @@ class Snake {
       this.position.x < 0 ||
       this.position.y < 0 ||
       this.position.x >= MAX_X ||
-      this.position.y >= MAX_X
+      this.position.y >= MAX_Y
     ) {
       return true;
     }
@@ -93,8 +94,6 @@ class Snake {
     return position;
   }
 
-  // when active game
-
   setDirection(direction: Direction) {
     if (!this.isDirectionOpposite(direction)) {
       this.direction = direction;
@@ -102,10 +101,9 @@ class Snake {
   }
 
   move() {
-    // set new values
+    // set new position and add to path
     this.position = this.calcPosition(this.direction);
 
-    // add current values to path array
     let anchor: Position = {
       x: this.position.x,
       y: this.position.y,
@@ -243,15 +241,21 @@ class Game extends EventTarget {
   private bite: Bite;
   private _complete: Event = new Event("complete");
 
-  // https://hackwild.com/article/event-handling-techniques/
-
   constructor(canvas: Canvas, speed: number = 700) {
     super();
     this.active = false;
     this.canvas = canvas;
     this.speed = speed;
-    this.snake = new Snake("#00ff00", 5, 5);
-    this.bite = new Bite("#4C0062", 11, 10);
+    this.snake = new Snake(
+      "#00ff00",
+      Math.floor(Math.random() * MAX_X),
+      Math.floor(Math.random() * MAX_Y)
+    );
+    this.bite = new Bite(
+      "#4C0062",
+      Math.floor(Math.random() * MAX_X),
+      Math.floor(Math.random() * MAX_Y)
+    );
   }
 
   setActive(status: boolean) {
@@ -296,15 +300,30 @@ class Game extends EventTarget {
       const y = Math.floor(Math.random() * MAX_Y);
       this.bite.set(x, y);
     }
+    this.gameLoop(this.speed, this.snake.getScore());
+  }
 
-    const intervalID = setInterval(() => {
+  speedUp(timeStamp: number, tempSnakeScore: number) {
+    // speed dependents on snake score
+    let speed = timeStamp;
+    if (tempSnakeScore < this.snake.getScore() && timeStamp > 50) {
+      speed = Math.floor(timeStamp - 50);
+    }
+    this.gameLoop(speed, this.snake.getScore());
+  }
+
+  gameLoop(timeStamp: number, tempSnakeScore: number) {
+    const timeoutID = setTimeout(() => {
       if (this.active) {
         this.snake.move();
         if (this.snake.crossBorder()) {
+          // draw message
           this.gameOver();
+          // stop loop
           this.active = !this.active;
-          clearInterval(intervalID);
           this.dispatchEvent(this._complete);
+          clearTimeout(timeoutID);
+          return;
         } else {
           if (this.snake.checkForCollision(this.bite.position)) {
             this.snake.incrementScore();
@@ -313,18 +332,25 @@ class Game extends EventTarget {
             );
             if (randomPosition) {
               this.bite.set(randomPosition.x, randomPosition.y);
+              this.speedUp(timeStamp, tempSnakeScore);
             } else {
+              // draw message
               this.end();
+              // stop loop
               this.active = !this.active;
-              clearInterval(intervalID);
               this.dispatchEvent(this._complete);
+              clearTimeout(timeoutID);
+              return;
             }
           } else {
             this.update();
+            this.speedUp(timeStamp, tempSnakeScore);
           }
         }
+      } else {
+        this.speedUp(timeStamp, tempSnakeScore);
       }
-    }, this.speed);
+    }, timeStamp);
   }
 
   update() {
@@ -350,26 +376,19 @@ class Game extends EventTarget {
   gameOver() {
     this.canvas.drawMessage("game over");
   }
-
-  // event name
 }
 
 /* INIT */
-
 const run = () => {
   // init canvas and game items
   const canvas = new Canvas(20, MAX_X, MAX_Y);
   // scene
-  let game = new Game(canvas, 550);
+  let game = new Game(canvas, MIN_SPEED);
 
   // control
   const startButton: HTMLButtonElement = tryGetButton("start");
   const pauseButton: HTMLButtonElement = tryGetButton("pause");
   const playButton: HTMLButtonElement = tryGetButton("play");
-
-  function newGame() {
-    game = new Game(canvas, 550);
-  }
 
   if (startButton && pauseButton && playButton) {
     startButton.addEventListener("click", async () => {
@@ -379,7 +398,7 @@ const run = () => {
       const completeHandler = () => {
         startButton.disabled = false;
         startButton.innerText = "restart";
-        newGame();
+        game = new Game(canvas, MIN_SPEED);
       };
       game.addEventListener("complete", completeHandler);
     });
