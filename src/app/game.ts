@@ -11,9 +11,9 @@ type Position = { x: number; y: number };
 
 /* GLOBAL */
 
-const MAX_X = 10;
-const MAX_Y = 10;
-const MIN_SPEED = 750;
+const MAX_X = 15;
+const MAX_Y = 15;
+const MIN_SPEED = 850;
 
 /* CLASSES */
 

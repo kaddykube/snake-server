@@ -1,1 +1,1 @@
-express - typescript - tailwind
+express - typescript
