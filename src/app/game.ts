@@ -152,14 +152,14 @@ class Bite {
 }
 
 class Canvas {
-  private tileSize: number;
-  private nrTilesX: number;
-  private nrTilesY: number;
-
   private canvas: HTMLCanvasElement;
   private context: CanvasRenderingContext2D;
 
-  constructor(tileSize: number, nrTilesX: number, nrTilesY: number) {
+  constructor(
+    private tileSize: number,
+    private nrTilesX: number,
+    private nrTilesY: number
+  ) {
     this.tileSize = tileSize;
     this.nrTilesX = nrTilesX;
     this.nrTilesY = nrTilesY;
@@ -169,18 +169,25 @@ class Canvas {
 
   createCanvas() {
     const canvas = document.createElement("canvas");
-    let context = canvas.getContext("2d");
-    canvas.width = this.nrTilesX * this.tileSize;
-    canvas.height = this.nrTilesY * this.tileSize;
-    this.canvas = canvas;
-    if (context) {
-      this.context = context;
-      let game = document.getElementById("game");
-      if (game) {
-        game.appendChild(this.canvas);
+    if (canvas) {
+      let context = canvas.getContext("2d");
+      canvas.width = this.nrTilesX * this.tileSize;
+      canvas.height = this.nrTilesY * this.tileSize;
+      this.canvas = canvas;
+
+      if (context) {
+        this.context = context;
+        let game = document.getElementById("game");
+        if (game) {
+          game.appendChild(this.canvas);
+        } else {
+          throw new Error("no game element");
+        }
+      } else {
+        throw new Error("no context");
       }
     } else {
-      throw new Error("no context");
+      throw new Error("no canvas");
     }
   }
 
@@ -258,13 +265,12 @@ class Canvas {
 
 class Game extends EventTarget {
   private _active: boolean;
-  private canvas: Canvas;
   private _speed: number;
   private _snake: Snake;
   private _bite: Bite;
   private complete: Event = new Event("complete");
 
-  constructor(canvas: Canvas, speed: number = 700) {
+  constructor(private canvas: Canvas, speed: number = 700) {
     super();
     this._active = false;
     this.canvas = canvas;
@@ -340,8 +346,10 @@ class Game extends EventTarget {
         y: Math.floor(Math.random() * MAX_Y),
       };
       this.bite.position = positionBite;
+      this.gameLoop(this.speed, this.snake.score);
+    } else {
+      throw new Error("no entities ");
     }
-    this.gameLoop(this.speed, this.snake.score);
   }
 
   speedUp(timeStamp: number, tempSnakeScore: number) {
