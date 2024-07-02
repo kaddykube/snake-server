@@ -54,6 +54,20 @@ class Snake {
     }
   }
 
+  biteTail() {
+    // new position is set before biteTail is called
+    // check for duplication in this.path
+    if (this.getScore() > 1) {
+      if (
+        this.path.filter((position) => {
+          return isEqualPosition(position, this.position);
+        }).length > 1
+      ) {
+        return true;
+      }
+    }
+  }
+
   checkForCollision(bitePosition: Position) {
     return isEqualPosition(this.position, bitePosition);
   }
@@ -306,8 +320,10 @@ class Game extends EventTarget {
   speedUp(timeStamp: number, tempSnakeScore: number) {
     // speed dependents on snake score
     let speed = timeStamp;
-    if (tempSnakeScore < this.snake.getScore() && timeStamp > 50) {
-      speed = Math.floor(timeStamp - 50);
+    if (speed > 150) {
+      if (tempSnakeScore < this.snake.getScore() && timeStamp > 50) {
+        speed = Math.floor(timeStamp - 20);
+      }
     }
     this.gameLoop(speed, this.snake.getScore());
   }
@@ -316,7 +332,7 @@ class Game extends EventTarget {
     const timeoutID = setTimeout(() => {
       if (this.active) {
         this.snake.move();
-        if (this.snake.crossBorder()) {
+        if (this.snake.crossBorder() || this.snake.biteTail()) {
           // draw message
           this.gameOver();
           // stop loop
