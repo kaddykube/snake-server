@@ -11,22 +11,20 @@ type Position = { x: number; y: number };
 
 /* GLOBAL */
 
-const MAX_X = 15;
-const MAX_Y = 15;
-const MIN_SPEED = 850;
+const MAX_X = 10;
+const MAX_Y = 10;
+const MIN_SPEED = 650;
+const BITE_COLOR = "#4C0062";
+const SNAKE_COLOR = "#00ff00";
 
 /* CLASSES */
 
 class Snake {
-  private position: Position;
-  color: string;
   private direction: Direction;
   private score: number;
   path: Position[];
 
-  constructor(color: string, x: number, y: number) {
-    this.color = color;
-    this.position = { x: x, y: y };
+  constructor(x: number, y: number) {
     this.direction = Direction.RIGHT;
     this.score = 1;
     this.path = [];
@@ -45,10 +43,10 @@ class Snake {
 
   crossBorder() {
     if (
-      this.position.x < 0 ||
-      this.position.y < 0 ||
-      this.position.x >= MAX_X ||
-      this.position.y >= MAX_Y
+      this.path[this.path.length - 1].x < 0 ||
+      this.path[this.path.length - 1].y < 0 ||
+      this.path[this.path.length - 1].x >= MAX_X ||
+      this.path[this.path.length - 1].y >= MAX_Y
     ) {
       return true;
     }
@@ -57,10 +55,10 @@ class Snake {
   biteTail() {
     // new position is set before biteTail is called
     // check for duplication in this.path
-    if (this.getScore() > 1) {
+    if (this.path.length > 1) {
       if (
         this.path.filter((position) => {
-          return isEqualPosition(position, this.position);
+          return isEqualPosition(position, this.path[this.path.length - 1]);
         }).length > 1
       ) {
         return true;
@@ -69,7 +67,7 @@ class Snake {
   }
 
   checkForCollision(bitePosition: Position) {
-    return isEqualPosition(this.position, bitePosition);
+    return isEqualPosition(this.path[this.path.length - 1], bitePosition);
   }
 
   isDirectionOpposite(direction: Direction) {
@@ -93,17 +91,20 @@ class Snake {
     }
   }
 
-  calcPosition(direction: Direction): { x: number; y: number } {
-    let position = { x: this.position.x, y: this.position.y };
+  calcPosition(direction: Direction): Position {
+    let position = {
+      x: this.path[this.path.length - 1].x,
+      y: this.path[this.path.length - 1].y,
+    };
 
     if (direction === Direction.LEFT) {
-      position.x = this.position.x - 1;
+      position.x = this.path[this.path.length - 1].x - 1;
     } else if (direction === Direction.RIGHT) {
-      position.x = this.position.x + 1;
+      position.x = this.path[this.path.length - 1].x + 1;
     } else if (direction === Direction.UP) {
-      position.y = this.position.y - 1;
+      position.y = this.path[this.path.length - 1].y - 1;
     } else if (direction === Direction.DOWN) {
-      position.y = this.position.y + 1;
+      position.y = this.path[this.path.length - 1].y + 1;
     }
     return position;
   }
@@ -116,14 +117,8 @@ class Snake {
 
   move() {
     // set new position and add to path
-    this.position = this.calcPosition(this.direction);
-
-    let anchor: Position = {
-      x: this.position.x,
-      y: this.position.y,
-    };
-
-    this.path.push(anchor);
+    let position = this.calcPosition(this.direction);
+    this.path.push(position);
     if (this.path.length > this.score) {
       this.path.shift();
     }
@@ -131,12 +126,10 @@ class Snake {
 }
 
 class Bite {
-  color: string;
-  position: { x: number; y: number };
+  position: Position;
 
-  constructor(color: string, x: number, y: number) {
+  constructor(x: number, y: number) {
     this.position = { x: x, y: y };
-    this.color = color;
   }
 
   set(x: number, y: number) {
@@ -166,12 +159,16 @@ class Canvas {
     canvas.width = this.nrTilesX * this.tileSize;
     canvas.height = this.nrTilesY * this.tileSize;
     this.canvas = canvas;
-    if (context) {
-      this.context = context;
-    }
-    let game = document.getElementById("game");
-    if (game) {
-      game.appendChild(this.canvas);
+    try {
+      if (context) {
+        this.context = context;
+        let game = document.getElementById("game");
+        if (game) {
+          game.appendChild(this.canvas);
+        }
+      }
+    } catch (err) {
+      document.getElementById("game").innerHTML = err.message;
     }
   }
 
@@ -191,7 +188,7 @@ class Canvas {
 
   drawBite(bite: Bite) {
     if (bite.position.x < this.nrTilesX && bite.position.y < this.nrTilesY) {
-      this.context.fillStyle = bite.color;
+      this.context.fillStyle = BITE_COLOR;
       this.context.beginPath();
       this.context.roundRect(
         bite.position.x * this.tileSize,
@@ -207,7 +204,7 @@ class Canvas {
 
   drawSnake(snake: Snake) {
     snake.path.forEach((anchor) => {
-      this.context.fillStyle = snake.color;
+      this.context.fillStyle = SNAKE_COLOR;
       this.context.fillRect(
         anchor.x * this.tileSize,
         anchor.y * this.tileSize,
@@ -253,7 +250,7 @@ class Game extends EventTarget {
   private speed: number;
   private snake: Snake;
   private bite: Bite;
-  private _complete: Event = new Event("complete");
+  private complete: Event = new Event("complete");
 
   constructor(canvas: Canvas, speed: number = 700) {
     super();
@@ -261,14 +258,12 @@ class Game extends EventTarget {
     this.canvas = canvas;
     this.speed = speed;
     this.snake = new Snake(
-      "#00ff00",
-      Math.floor(Math.random() * MAX_X),
-      Math.floor(Math.random() * MAX_Y)
+      Math.floor((Math.random() * MAX_X) / 2),
+      Math.floor((Math.random() * MAX_Y) / 2)
     );
     this.bite = new Bite(
-      "#4C0062",
-      Math.floor(Math.random() * MAX_X),
-      Math.floor(Math.random() * MAX_Y)
+      Math.floor((Math.random() * MAX_X) / 2),
+      Math.floor((Math.random() * MAX_Y) / 2)
     );
   }
 
@@ -337,7 +332,7 @@ class Game extends EventTarget {
           this.gameOver();
           // stop loop
           this.active = !this.active;
-          this.dispatchEvent(this._complete);
+          this.dispatchEvent(this.complete);
           clearTimeout(timeoutID);
           return;
         } else {
@@ -354,7 +349,7 @@ class Game extends EventTarget {
               this.end();
               // stop loop
               this.active = !this.active;
-              this.dispatchEvent(this._complete);
+              this.dispatchEvent(this.complete);
               clearTimeout(timeoutID);
               return;
             }
@@ -407,7 +402,7 @@ const run = () => {
   const playButton: HTMLButtonElement = tryGetButton("play");
 
   if (startButton && pauseButton && playButton) {
-    startButton.addEventListener("click", async () => {
+    startButton.addEventListener("click", () => {
       startButton.disabled = true;
       startButton.innerText = "running";
       game.start();
